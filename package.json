@@ -9,7 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@noble/curves": "^1.6.0",
     "@prisma/client": "^5.20.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.0",
     "@solana/spl-token": "^0.4.8",
     "@solana/wallet-adapter-base": "^0.9.23",
