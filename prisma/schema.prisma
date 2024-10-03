@@ -37,7 +37,7 @@ model Transaction {
   user             User              @relation(fields: [userId], references: [id])
   type             TransactionType
   recipientAddress String?
-  amount           BigInt?
+  amount           Decimal?
   status           TransactionStatus
 }
 
