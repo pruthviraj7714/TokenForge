@@ -6,10 +6,48 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function Appbar() {
-  const { publicKey } = useWallet();
+  const { publicKey, signMessage } = useWallet();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const verifyUser = async () => {
+    setIsVerifying(true);
+
+    if (!signMessage) {
+      toast.error("Wallet does not support message signing!");
+      return;
+    }
+
+    const message = `verify ownership of wallet: ${publicKey?.toString()} - ${new Date().toISOString()}`;
+    const encodeMessage = new TextEncoder().encode(message);
+
+    let signature;
+    try {
+      signature = await signMessage(encodeMessage);
+    } catch (error: any) {
+      toast.error(error.message);
+      setIsVerifying(false);
+      return;
+    }
+
+    try {
+      await axios.patch("/api/verify-user", {
+        publicKey,
+        signature: Array.from(signature),
+        message,
+      });
+      setIsVerified(true);
+      toast.success("Successfully Verified!");
+    } catch (error: any) {
+      toast.error(error?.response.data.message ?? error.message);
+    }
+
+    setIsVerifying(false);
+  };
 
   useEffect(() => {
     const connectWallet = async () => {
@@ -29,15 +67,29 @@ export default function Appbar() {
 
   return (
     <div className="flex items-center p-4 bg-black justify-between">
-      <div className="font-semibold text-xl text-white cursor-pointer">
+      <Link
+        href={"/home"}
+        className="font-semibold text-xl text-white cursor-pointer"
+      >
         Token<span className="text-yellow-400">Forge</span>
-      </div>
+      </Link>
       <div className="flex items-center gap-4">
         {publicKey ? <WalletMultiButton /> : <WalletMultiButton />}
         <div>
           {publicKey && isVerified === false && (
-            <Button className="px-6 py-2 bg-purple-500 hover:bg-purple-600">
-              Verify Wallet
+            <Button
+              disabled={isVerifying}
+              onClick={verifyUser}
+              className="px-6 py-2 bg-purple-500 hover:bg-purple-600"
+            >
+              {isVerifying ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="animate-spin" />
+                  Verifying...
+                </div>
+              ) : (
+                "Verify Wallet"
+              )}
             </Button>
           )}
         </div>
