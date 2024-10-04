@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 export default function LandingPage() {
   const router = useRouter();
   return (
-    <div className="min-h-screen bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-slate-800 to-black text-white">
       <header className="container mx-auto py-8">
         <h1 className="text-4xl font-bold text-center">
           Token<span className="text-yellow-400">Forge</span>

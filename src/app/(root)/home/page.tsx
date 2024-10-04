@@ -3,17 +3,18 @@ import { CoinsIcon, DollarSignIcon, SendIcon } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center bg-gradient-to-r from-slate-800 to-slate-900  min-h-screen">
-      <h1 className="my-4 font-bold text-wrap text-white w-[750px] text-4xl">
-        Welcome to Solana LaunchPad, Create your own tokens, airdop yourself and
-        send tokens to others
+    <div className="flex flex-col items-center bg-gradient-to-br from-purple-900 via-slate-800 to-black min-h-screen py-10 px-4">
+      <h1 className="my-8 font-extrabold text-center text-white max-w-5xl text-5xl leading-tight drop-shadow-lg">
+        Empower your digital journey with Solana: Seamlessly create, manage, and
+        send tokens while exploring airdrops and more — all in one secure
+        platform.
       </h1>
 
-      <div className="my-4 flex items-center gap-5">
+      <div className="my-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         <FeatureCard
-          title="Airdop Solana"
+          title="Airdrop Solana"
           Icon={DollarSignIcon}
-          href={"/airdop-solana"}
+          href={"/airdrop-solana"}
         />
         <FeatureCard
           title="Send Solana"
