@@ -9,7 +9,7 @@ export async function POST(req : NextRequest) {
         if(!publicKey) {
             return NextResponse.json({
                 message : "Public key is missing!"
-            }, { status : 411})
+            }, { status : 400})
         }
 
         const user = await prisma.user.findFirst({

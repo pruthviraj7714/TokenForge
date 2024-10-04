@@ -1,12 +1,14 @@
 import prisma from "@/lib/db";
+import {
+  clusterApiUrl,
+  Connection,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+} from "@solana/web3.js";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const {
-    publicKey,
-    amount,
-    status,
-  }: { publicKey: string; amount: number; status: "Success" | "Failed" } =
+  const { publicKey, amount }: { publicKey: string; amount: number } =
     await req.json();
 
   if (!publicKey || !amount) {
@@ -42,6 +44,21 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    const connection = new Connection(clusterApiUrl("devnet"));
+
+    let isError = false;
+
+    try {
+      await connection.requestAirdrop(
+        new PublicKey(publicKey),
+        amount * LAMPORTS_PER_SOL
+      );
+    } catch (error) {
+      isError = true;
+    }
+
+    const status = isError ? "Failed" : "Success";
 
     await prisma.transaction.create({
       data: {
