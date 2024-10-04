@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import axios from "axios";
 import { LucideLoader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,7 +19,6 @@ import { toast } from "sonner";
 
 export default function AirdropSolana() {
   const { publicKey } = useWallet();
-  const { connection } = useConnection();
   const [amount, setAmount] = useState<string>("");
   const [requesting, setRequesting] = useState<boolean>(false);
   const router = useRouter();
@@ -47,29 +45,13 @@ export default function AirdropSolana() {
       return;
     }
 
-    let isError = false;
-
-    try {
-      await connection.requestAirdrop(
-        new PublicKey(publicKey),
-        Number(amount) * LAMPORTS_PER_SOL
-      );
-    } catch (error) {
-      isError = true;
-    }
-
     try {
       await axios.post("/api/user/transaction/airdrop", {
         publicKey,
         amount : Number(amount),
-        status: isError ? "Failed" : "Success",
       });
-
-      if (isError) {
-        toast.error("Error occurred during Sol airdrop.");
-      } else {
-        toast.success(`${amount} sol Successfully Airdroped!`);
-      }
+      toast.success(`${amount} sol Successfully Airdroped!`);
+  
     } catch (error: any) {
       toast.error(error.response.data.message ?? error.message);
     } finally {
