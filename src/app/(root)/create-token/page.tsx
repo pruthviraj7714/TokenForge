@@ -1,6 +1,5 @@
 "use client";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -15,20 +14,42 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
   createInitializeMetadataPointerInstruction,
   createInitializeMintInstruction,
+  createMintToInstruction,
   ExtensionType,
+  getAssociatedTokenAddress,
   getMintLen,
   LENGTH_SIZE,
   TOKEN_2022_PROGRAM_ID,
   TYPE_SIZE,
 } from "@solana/spl-token";
-import { Keypair, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
 import { toast } from "sonner";
 import axios from "axios";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import { LucideLoader2, SendIcon } from "lucide-react";
 
 const formSchema = z.object({
   image: z.string().url({ message: "Image must be valid URL" }),
@@ -48,10 +69,16 @@ const formSchema = z.object({
 });
 
 export default function CreateTokenPage() {
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const { connection } = useConnection();
-
+  const [createAtaDialogOpen, setCreateAtaDialogOpen] = useState(false);
   const router = useRouter();
+  const [sending, setSending] = useState(false);
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [mintAmount, setMintAmount] = useState<number>(0);
+  const [mintTokenPublicKey, setMintTokenPublicKey] = useState<string>("");
+  const [mintKeyPair, setMintKeyPair] = useState<Keypair>();
+  const [minting, setMinting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,22 +93,25 @@ export default function CreateTokenPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!publicKey) {
+      toast.error("Wallet is not connected");
       return;
     }
 
+    setSending(true);
     let isError = false;
     let tx;
     let metaData;
-    let err;
     try {
       const mintKeyPair = Keypair.generate();
+      setMintKeyPair(mintKeyPair);
+      setMintTokenPublicKey(mintKeyPair.publicKey.toString());
       const transaction = new Transaction();
 
       metaData = {
         mint: mintKeyPair.publicKey,
         name: values.name,
         symbol: values.symbol,
-        uri : values.image,
+        uri: values.image,
         additionalMetadata: [],
       };
 
@@ -131,35 +161,95 @@ export default function CreateTokenPage() {
       ).blockhash;
 
       transaction.partialSign(mintKeyPair);
-
       tx = await sendTransaction(transaction, connection);
       console.log(tx);
+
+      toast.success(
+        `${metaData.name} tokens successfully minted! Check it on Solana Explorer: https://explorer.solana.com/tx/${tx}`
+      );
+      setCreateAtaDialogOpen(true);
     } catch (error: any) {
       isError = true;
-      err = error;
-      toast.error(error.response.data.message ?? error.message);
+      toast.error(error.message);
     }
 
     try {
       await axios.post("/api/create-token", {
         metaData,
-        supply : values.supply,
+        supply: values.supply,
         walletAddress: publicKey.toString(),
         status: isError ? "Failed" : "Success",
         transaction: isError ? null : tx,
       });
-
-      if (isError) {
-        toast.error(err.message);
-      } else {
-        toast.success(
-          `${metaData?.name} tokens successfully minted You can check it out using https://explorer.solana.com/ by this ${tx}`
-        );
-      }
     } catch (error: any) {
-      toast.error(error.response.data.message ?? error.message);
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setSending(false);
     }
   }
+
+  const createAndMinttoAccount = async () => {
+    setMinting(true);
+    console.log("Mint KeyPair:", mintKeyPair);
+
+    if (!publicKey || !mintKeyPair || !signTransaction) {
+      toast.error("Mint KeyPair is not generated yet");
+      setMinting(false);
+      return;
+    }
+
+    try {
+      const transaction = new Transaction();
+      const ata = await getAssociatedTokenAddress(
+        new PublicKey(mintTokenPublicKey),
+        new PublicKey(recipientAddress),
+        false,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      console.log("Generated ATA:", ata);
+
+      const createAtaInstruction = createAssociatedTokenAccountInstruction(
+        publicKey,
+        ata,
+        new PublicKey(recipientAddress),
+        new PublicKey(mintTokenPublicKey),
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const mintAmountInBaseUnits =
+        mintAmount * Math.pow(10, form.getValues().decimal);
+      const mintToInstruction = createMintToInstruction(
+        new PublicKey(mintTokenPublicKey),
+        ata,
+        publicKey,
+        mintAmountInBaseUnits
+      );
+
+      transaction.add(createAtaInstruction, mintToInstruction);
+      transaction.feePayer = publicKey;
+
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+
+      const signedTransaction = await signTransaction(transaction);
+      const txid = await connection.sendRawTransaction(
+        signedTransaction.serialize()
+      );
+      await connection.confirmTransaction(txid);
+
+      toast.success(
+        `${mintAmount} tokens successfully minted to ${recipientAddress}`
+      );
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setMinting(false);
+    }
+  };
 
   useEffect(() => {
     if (!publicKey) {
@@ -282,6 +372,61 @@ export default function CreateTokenPage() {
           </Form>
         </CardContent>
       </Card>
+      {createAtaDialogOpen && (
+        <Dialog
+          onOpenChange={setCreateAtaDialogOpen}
+          open={createAtaDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Mint New Coins</DialogTitle>
+              <p className="text-gray-400">
+                Select the recipient and amount of tokens you want to mint.
+              </p>
+            </DialogHeader>
+
+            <div className="flex flex-col space-y-4">
+              <Label className="text-gray-300">Recipient Wallet Address</Label>
+              <Input
+                onChange={(e) => setRecipientAddress(e.target.value)}
+                className="bg-gray-700 placeholder:text-gray-400 text-gray-300 border-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter the recipient's wallet address"
+                value={recipientAddress}
+              />
+
+              <Label className="text-gray-300">Amount to Mint</Label>
+              <Input
+                className="bg-gray-700 placeholder:text-gray-400 text-gray-300 border-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter the amount of tokens to mint"
+                onChange={(e) => setMintAmount(Number(e.target.value))}
+                value={mintAmount}
+              />
+            </div>
+
+            <button
+              // disabled={minting || !mintAmount}
+              onClick={createAndMinttoAccount}
+              className="flex items-center gap-1.5 mt-4 bg-purple-600 hover:bg-purple-700"
+            >
+              {minting ? (
+                <div className="flex items-center gap-1.5">
+                  <LucideLoader2 className="animate-spin" />
+                  Minting...
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <SendIcon />
+                  Mint Tokens
+                </div>
+              )}
+            </button>
+
+            <DialogFooter>
+              <DialogClose className="text-gray-300">Cancel</DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
