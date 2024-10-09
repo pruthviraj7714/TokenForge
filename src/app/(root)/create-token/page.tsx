@@ -21,6 +21,7 @@ import {
   createMintToInstruction,
   ExtensionType,
   getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
   getMintLen,
   LENGTH_SIZE,
   TOKEN_2022_PROGRAM_ID,
@@ -32,24 +33,12 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
 import { toast } from "sonner";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import { LucideLoader2, SendIcon } from "lucide-react";
 
 const formSchema = z.object({
   image: z.string().url({ message: "Image must be valid URL" }),
@@ -66,6 +55,8 @@ const formSchema = z.object({
     .min(0, { message: "The Decimals Cannot be less than 0" })
     .max(9, { message: "Decimals Cannot be more than 9" }),
   supply: z.number().min(1, { message: "Put the Amount to mint" }),
+  recipientAddress: z.string(),
+  mintAmount: z.number(),
 });
 
 export default function CreateTokenPage() {
@@ -77,7 +68,7 @@ export default function CreateTokenPage() {
   const [recipientAddress, setRecipientAddress] = useState("");
   const [mintAmount, setMintAmount] = useState<number>(0);
   const [mintTokenPublicKey, setMintTokenPublicKey] = useState<string>("");
-  const [mintKeyPair, setMintKeyPair] = useState<Keypair>();
+  const [mintKeyPair, setMintKeyPair] = useState<Keypair | null>(null);
   const [minting, setMinting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -88,6 +79,8 @@ export default function CreateTokenPage() {
       symbol: "",
       decimal: 0,
       supply: 0,
+      recipientAddress: "",
+      mintAmount: 0,
     },
   });
 
@@ -122,6 +115,35 @@ export default function CreateTokenPage() {
         mintLen + metadataLen
       );
 
+      const ata = getAssociatedTokenAddressSync(
+        mintKeyPair.publicKey,
+        new PublicKey(values.recipientAddress),
+        false,
+        TOKEN_2022_PROGRAM_ID
+      );
+
+      console.log("Generated ATA:", ata);
+
+      const createAtaInstruction = createAssociatedTokenAccountInstruction(
+        publicKey,
+        ata,
+        new PublicKey(values.recipientAddress),
+        mintKeyPair.publicKey,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      const mintAmountInBaseUnits =
+        mintAmount * Math.pow(10, values.decimal);
+      const mintToInstruction = createMintToInstruction(
+        mintKeyPair.publicKey,
+        ata,
+        publicKey,
+        mintAmountInBaseUnits,
+        [],
+        TOKEN_2022_PROGRAM_ID
+      );
+
       transaction.add(
         SystemProgram.createAccount({
           fromPubkey: publicKey,
@@ -152,7 +174,9 @@ export default function CreateTokenPage() {
           updateAuthority: publicKey,
           mint: mintKeyPair.publicKey,
           metadata: mintKeyPair.publicKey,
-        })
+        }),
+        createAtaInstruction,
+        mintToInstruction
       );
 
       transaction.feePayer = publicKey;
@@ -164,10 +188,10 @@ export default function CreateTokenPage() {
       tx = await sendTransaction(transaction, connection);
       console.log(tx);
 
-      toast.success(
-        `${metaData.name} tokens successfully minted! Check it on Solana Explorer: https://explorer.solana.com/tx/${tx}`
-      );
-      setCreateAtaDialogOpen(true);
+      toast.success(`${metaData.name} tokens successfully minted!`, {
+        description: `Check it on ${recipientAddress}.`,
+        position: "top-center",
+      });
     } catch (error: any) {
       isError = true;
       toast.error(error.message);
@@ -187,69 +211,6 @@ export default function CreateTokenPage() {
       setSending(false);
     }
   }
-
-  const createAndMinttoAccount = async () => {
-    setMinting(true);
-    console.log("Mint KeyPair:", mintKeyPair);
-
-    if (!publicKey || !mintKeyPair || !signTransaction) {
-      toast.error("Mint KeyPair is not generated yet");
-      setMinting(false);
-      return;
-    }
-
-    try {
-      const transaction = new Transaction();
-      const ata = await getAssociatedTokenAddress(
-        new PublicKey(mintTokenPublicKey),
-        new PublicKey(recipientAddress),
-        false,
-        TOKEN_2022_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-
-      console.log("Generated ATA:", ata);
-
-      const createAtaInstruction = createAssociatedTokenAccountInstruction(
-        publicKey,
-        ata,
-        new PublicKey(recipientAddress),
-        new PublicKey(mintTokenPublicKey),
-        TOKEN_2022_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-
-      const mintAmountInBaseUnits =
-        mintAmount * Math.pow(10, form.getValues().decimal);
-      const mintToInstruction = createMintToInstruction(
-        new PublicKey(mintTokenPublicKey),
-        ata,
-        publicKey,
-        mintAmountInBaseUnits
-      );
-
-      transaction.add(createAtaInstruction, mintToInstruction);
-      transaction.feePayer = publicKey;
-
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-
-      const signedTransaction = await signTransaction(transaction);
-      const txid = await connection.sendRawTransaction(
-        signedTransaction.serialize()
-      );
-      await connection.confirmTransaction(txid);
-
-      toast.success(
-        `${mintAmount} tokens successfully minted to ${recipientAddress}`
-      );
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message);
-    } finally {
-      setMinting(false);
-    }
-  };
 
   useEffect(() => {
     if (!publicKey) {
@@ -362,6 +323,48 @@ export default function CreateTokenPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="recipientAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-300">
+                      Recipient Address
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        className="bg-gray-700 text-white border-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="Enter the address for which tokens to mint for that account"
+                        {...field}
+                      />
+                    </FormControl>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="mintAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-300">
+                      Mint Amouont
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        className="bg-gray-700 text-white border-none focus:ring-2 focus:ring-purple-500"
+                        type="number"
+                        placeholder="Enter the amount of tokens to mint"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <Button
                 className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition duration-300"
                 type="submit"
@@ -372,61 +375,6 @@ export default function CreateTokenPage() {
           </Form>
         </CardContent>
       </Card>
-      {createAtaDialogOpen && (
-        <Dialog
-          onOpenChange={setCreateAtaDialogOpen}
-          open={createAtaDialogOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Mint New Coins</DialogTitle>
-              <p className="text-gray-400">
-                Select the recipient and amount of tokens you want to mint.
-              </p>
-            </DialogHeader>
-
-            <div className="flex flex-col space-y-4">
-              <Label className="text-gray-300">Recipient Wallet Address</Label>
-              <Input
-                onChange={(e) => setRecipientAddress(e.target.value)}
-                className="bg-gray-700 placeholder:text-gray-400 text-gray-300 border-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter the recipient's wallet address"
-                value={recipientAddress}
-              />
-
-              <Label className="text-gray-300">Amount to Mint</Label>
-              <Input
-                className="bg-gray-700 placeholder:text-gray-400 text-gray-300 border-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter the amount of tokens to mint"
-                onChange={(e) => setMintAmount(Number(e.target.value))}
-                value={mintAmount}
-              />
-            </div>
-
-            <button
-              // disabled={minting || !mintAmount}
-              onClick={createAndMinttoAccount}
-              className="flex items-center gap-1.5 mt-4 bg-purple-600 hover:bg-purple-700"
-            >
-              {minting ? (
-                <div className="flex items-center gap-1.5">
-                  <LucideLoader2 className="animate-spin" />
-                  Minting...
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <SendIcon />
-                  Mint Tokens
-                </div>
-              )}
-            </button>
-
-            <DialogFooter>
-              <DialogClose className="text-gray-300">Cancel</DialogClose>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
