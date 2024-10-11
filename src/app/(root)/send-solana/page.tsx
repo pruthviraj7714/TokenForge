@@ -1,5 +1,5 @@
 "use client";
-import { isUserVerified } from "@/actions/verifyUser";
+import { isUserVerified } from "@/actions/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
