@@ -1,20 +1,24 @@
 "use client";
 
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletDisconnectButton, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import {
+  WalletDisconnectButton,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, User2Icon } from "lucide-react";
 import Link from "next/link";
 
 export default function Appbar() {
   const { publicKey, signMessage } = useWallet();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);  
+  const [isMounted, setIsMounted] = useState(false);
+  const [profile, setProfile] = useState<string>("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -62,6 +66,7 @@ export default function Appbar() {
           publicKey,
         });
         setIsVerified(res.data.user.isVerified);
+        setProfile(res.data.user.profilePhoto);
       } catch (error: any) {
         toast.error(error.response.data.message ?? error.message);
       }
@@ -71,7 +76,7 @@ export default function Appbar() {
     }
   }, [publicKey]);
 
-  if (!isMounted) return null; 
+  if (!isMounted) return null;
 
   return (
     <div className="flex items-center p-4 bg-black justify-between">
@@ -84,7 +89,7 @@ export default function Appbar() {
       <div className="flex items-center gap-4">
         {publicKey ? <WalletDisconnectButton /> : <WalletMultiButton />}
         <div>
-          {publicKey && isVerified === false && (
+          {publicKey && !isVerified && (
             <Button
               disabled={isVerifying}
               onClick={verifyUser}
@@ -101,6 +106,14 @@ export default function Appbar() {
             </Button>
           )}
         </div>
+        {publicKey && profile && (
+          <Link
+            href={"/profile"}
+            className="flex bg-white h-12 w-12 hover:bg-white/85 hover:text-purple-600 text-purple-500 rounded-full cursor-pointer items-center justify-center hover:opacity-80"
+          >
+            <img src={profile} alt="Profile_Photo" className="h-full w-full rounded-full object-cover" />
+          </Link>
+        )}
       </div>
     </div>
   );
