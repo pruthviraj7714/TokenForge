@@ -17,19 +17,21 @@ model User {
   id            String        @id @default(uuid())
   walletAddress String
   isVerified    Boolean       @default(false)
+  profilePhoto  String
   transactions  Transaction[]
   tokens        Token[]
 }
 
 model Token {
-  id     String  @id @default(uuid())
-  name   String  @unique
-  image  String
-  supply Decimal
-  symbol String
-  userId String
-  txn    String?
-  user   User    @relation(fields: [userId], references: [id])
+  id          String       @id @default(uuid())
+  name        String       @unique
+  image       String
+  supply      Decimal
+  symbol      String
+  userId      String
+  txn         String?
+  transaction Transaction?
+  user        User         @relation(fields: [userId], references: [id])
 }
 
 model Transaction {
@@ -40,7 +42,11 @@ model Transaction {
   type             TransactionType
   recipientAddress String?
   amount           Decimal?
+  tokenId          String?
+  token            Token?            @relation(fields: [tokenId], references: [id])
   status           TransactionStatus
+
+  @@unique([tokenId])
 }
 
 enum TransactionType {
