@@ -1,3 +1,4 @@
+import { NFT_IMAGES } from "@/constants/constant";
 import prisma from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -23,6 +24,7 @@ export async function POST(req : NextRequest) {
                 data : {
                     walletAddress : publicKey.toString(),
                     isVerified : false,
+                    profilePhoto : NFT_IMAGES[Math.floor(Math.random() * NFT_IMAGES.length)]
                 }
             })
         }
