@@ -19,3 +19,13 @@ export async function isUserVerified(walletAddress: string) {
 
   return true;
 }
+
+export async function isTokenAlreadyExist(name: string, symbol: string) {
+  const isExist = await prisma.token.findFirst({
+    where: {
+      OR: [{ name: name }, { symbol: symbol }],
+    },
+  });
+
+  return isExist ? true : false;
+}
