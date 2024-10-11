@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { metaData, walletAddress, status, transaction, supply } = await req.json();
+    const { metaData, walletAddress, status, transaction, supply } =
+      await req.json();
 
     const user = await prisma.user.findFirst({
       where: {
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.$transaction(async (tranx) => {
-      await tranx.token.create({
+      const token = await tranx.token.create({
         data: {
           image: metaData.uri,
           name: metaData.name,
@@ -31,12 +32,12 @@ export async function POST(req: NextRequest) {
           userId: user.id,
         },
       });
-
       await tranx.transaction.create({
         data: {
           status: status === "Success" ? "SUCCESS" : "FAILED",
           type: "CREATE_TOKEN",
           userId: user.id,
+          tokenId: token.id,
         },
       });
     });
