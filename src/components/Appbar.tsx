@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
-import { Loader2, User2Icon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function Appbar() {
@@ -59,18 +59,20 @@ export default function Appbar() {
     setIsVerifying(false);
   };
 
+  const connectWallet = async () => {
+    try {
+      if (!publicKey) return;
+      const res = await axios.post("/api/connect-wallet", {
+        publicKey,
+      });
+      setIsVerified(res.data.user.isVerified);
+      setProfile(res.data.user.profilePhoto);
+    } catch (error: any) {
+      toast.error(error.response.data.message ?? error.message);
+    }
+  };
+  
   useEffect(() => {
-    const connectWallet = async () => {
-      try {
-        const res = await axios.post("/api/connect-wallet", {
-          publicKey,
-        });
-        setIsVerified(res.data.user.isVerified);
-        setProfile(res.data.user.profilePhoto);
-      } catch (error: any) {
-        toast.error(error.response.data.message ?? error.message);
-      }
-    };
     if (publicKey) {
       connectWallet();
     }
@@ -111,7 +113,11 @@ export default function Appbar() {
             href={"/profile"}
             className="flex bg-white h-12 w-12 hover:bg-white/85 hover:text-purple-600 text-purple-500 rounded-full cursor-pointer items-center justify-center hover:opacity-80"
           >
-            <img src={profile} alt="Profile_Photo" className="h-full w-full rounded-full object-cover" />
+            <img
+              src={profile}
+              alt="Profile_Photo"
+              className="h-full w-full rounded-full object-cover"
+            />
           </Link>
         )}
       </div>

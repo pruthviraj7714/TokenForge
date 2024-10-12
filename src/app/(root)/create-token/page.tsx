@@ -172,8 +172,6 @@ export default function CreateTokenPage() {
         TOKEN_2022_PROGRAM_ID
       );
 
-      console.log(associatedToken.toBase58());
-
       const transaction2 = new Transaction().add(
         createAssociatedTokenAccountInstruction(
           publicKey,
@@ -198,8 +196,6 @@ export default function CreateTokenPage() {
       );
 
       await sendTransaction(transaction3, connection);
-
-      console.log("Minted!");
 
       toast.success(`${metaData.name} tokens successfully minted!`, {
         description: `Check it in your wallet.`,

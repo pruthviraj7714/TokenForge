@@ -13,7 +13,6 @@ import { TransactionX } from "@/types/types";
 import SendSolCard from "@/components/SendSolCard";
 import CreateTokenCard from "@/components/CreateTokenCard";
 
-
 type Tab = "Created Tokens" | "Airdrop" | "Sent Sol";
 
 const TABS: Tab[] = ["Created Tokens", "Airdrop", "Sent Sol"];
@@ -24,8 +23,6 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<any>([]);
   const [profile, setProfile] = useState<string>("");
   const router = useRouter();
-
-
 
   const getAllTransactions = async () => {
     try {
@@ -38,14 +35,16 @@ export default function ProfilePage() {
       toast.error(error.response.data.message ?? error.message);
     }
   };
+
   useEffect(() => {
     if (!publicKey) {
       toast.error("Please Connect Your Wallet First", {
         position: "top-center",
       });
       router.push("/home");
+    }else {
+      getAllTransactions();
     }
-    getAllTransactions();
   }, [publicKey]);
 
   if (connecting || !connected) {
@@ -69,9 +68,14 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <CardTitle className="text-2xl">Welcome to TokenForge</CardTitle>
-              <p className="text-sm text-gray-300 mt-1">
-                Wallet Public Key: {publicKey?.toString()}
+              <CardTitle className="text-2xl">
+                Welcome to{" "}
+                <span className="font-bold">
+                  Token<span className="text-yellow-400">Forge</span>
+                </span>
+              </CardTitle>
+              <p className="text-sm text-gray-300 mt-2">
+                Wallet Public Key: <span className="font-extrabold">{publicKey?.toString()}</span>
               </p>
             </div>
           </CardHeader>

@@ -14,8 +14,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log(walletAddress);
-
     const user = await prisma.user.findFirst({
       where: {
         walletAddress : walletAddress.toString(),
