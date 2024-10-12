@@ -1,8 +1,10 @@
 import { Calendar, CheckCircle, XCircle, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow} from "date-fns"
+import { TransactionX } from "@/types/types";
 
-export default function SendSolCard({ transaction }: { transaction: any }) {
+export default function SendSolCard({ transaction }: { transaction: TransactionX }) {
   return (
     <Card className="bg-white/10 backdrop-blur-sm border-none text-white hover:bg-white/20 transition-colors">
       <CardContent className="p-4">
@@ -32,7 +34,7 @@ export default function SendSolCard({ transaction }: { transaction: any }) {
         </div>
         <div className="mt-3 flex items-center text-sm text-gray-300">
           <Calendar className="w-4 h-4 mr-2" />
-          {transaction.createdAt}
+          {formatDistanceToNow(transaction.createdAt, {addSuffix :  true})}
         </div>
       </CardContent>
     </Card>

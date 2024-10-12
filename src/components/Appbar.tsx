@@ -82,7 +82,7 @@ export default function Appbar() {
     <div className="flex items-center p-4 bg-black justify-between">
       <Link
         href={"/home"}
-        className="font-semibold text-xl text-white cursor-pointer"
+        className="font-semibold text-2xl text-white cursor-pointer"
       >
         Token<span className="text-yellow-400">Forge</span>
       </Link>

@@ -74,7 +74,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="container mx-auto py-8 text-center">
-        <p>&copy; 2024 TokenForge. All rights reserved.</p>
+        <p>&copy; 2024 <span className="font-bold">Token<span className="text-yellow-400">Forge</span></span> . All rights reserved.</p>
       </footer>
     </div>
   );

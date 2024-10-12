@@ -1,7 +1,8 @@
-import { Calendar, PlusCircle, CheckCircle, XCircle } from "lucide-react"
+import { Calendar, CheckCircle, XCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TransactionX } from "@/types/types"
+import { formatDistanceToNow } from "date-fns"
 
 
 export default function CreateTokenCard({ transaction }: { transaction: TransactionX }) {
@@ -32,7 +33,7 @@ export default function CreateTokenCard({ transaction }: { transaction: Transact
         </div>
         <div className="mt-3 flex items-center text-sm text-gray-300">
           <Calendar className="w-4 h-4 mr-2" />
-          {transaction.createdAt.toString()}
+          {formatDistanceToNow(transaction.createdAt, {addSuffix :  true})}
         </div>
       </CardContent>
     </Card>

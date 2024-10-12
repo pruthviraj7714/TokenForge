@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Coins, Send, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -13,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { TransactionX } from "@/types/types";
 import SendSolCard from "@/components/SendSolCard";
 import CreateTokenCard from "@/components/CreateTokenCard";
+
 
 type Tab = "Created Tokens" | "Airdrop" | "Sent Sol";
 
@@ -24,6 +24,8 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<any>([]);
   const [profile, setProfile] = useState<string>("");
   const router = useRouter();
+
+
 
   const getAllTransactions = async () => {
     try {
