@@ -46,11 +46,18 @@ export default function AirdropSolana() {
     }
 
     try {
-      await axios.post("/api/user/transaction/airdrop", {
+      const res = await axios.post("/api/user/transaction/airdrop", {
         publicKey,
         amount : Number(amount),
       });
-      toast.success(`${amount} sol Successfully Airdroped!`);
+
+      if(res.data.message === "Success") {
+        toast.success(`${amount} sol Successfully Airdroped!`);
+      }else {
+        toast.error("Failed to Aidrop Sol into your wallet", {
+          description : "Please try again after some time!"
+        })
+      }
   
     } catch (error: any) {
       toast.error(error.response.data.message ?? error.message);
