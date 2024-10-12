@@ -1,15 +1,15 @@
-import Appbar from "@/components/Appbar";
-import Providers from "@/components/Providers";
+import ProviderWrapper from "@/components/ProviderWrapper";
 
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div>
-    <Providers>
-      <Appbar />
-       {children}
-    </Providers>
-    </div>;
+  return (
+    <div>
+      <ProviderWrapper>
+        {children}
+      </ProviderWrapper>
+    </div>
+  );
 }

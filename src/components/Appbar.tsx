@@ -13,12 +13,19 @@ import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
-export default function Appbar() {
+type Network = "devnet" | "testnet" | "mainnet";
+
+export default function Appbar({
+  onEndpointChange,
+}: {
+  onEndpointChange: (newEndpoint: string) => void;
+}) {
   const { publicKey, signMessage } = useWallet();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [profile, setProfile] = useState<string>("");
+  const [network, setNetwork] = useState<Network>("devnet");
 
   useEffect(() => {
     setIsMounted(true);
@@ -71,12 +78,23 @@ export default function Appbar() {
       toast.error(error.response.data.message ?? error.message);
     }
   };
-  
+
   useEffect(() => {
     if (publicKey) {
       connectWallet();
     }
   }, [publicKey]);
+
+  const handleNetworkChange = (newNetwork: Network) => {
+    setNetwork(newNetwork);
+    onEndpointChange(
+      newNetwork === "devnet"
+        ? "https://api.devnet.solana.com"
+        : newNetwork === "mainnet"
+        ? "https://api.mainnet-beta.solana.com"
+        : "https://api.testnet.solana.com"
+    );
+  };
 
   if (!isMounted) return null;
 
@@ -89,6 +107,21 @@ export default function Appbar() {
         Token<span className="text-yellow-400">Forge</span>
       </Link>
       <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-2 bg-gray-800 rounded-lg p-1">
+          {(["devnet", "testnet", "mainnet"] as Network[]).map((net) => (
+            <button
+              key={net}
+              onClick={() => handleNetworkChange(net)}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                network === net
+                  ? "bg-yellow-400 text-black"
+                  : "text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              {net.charAt(0).toUpperCase() + net.slice(1)}
+            </button>
+          ))}
+        </div>
         {publicKey ? <WalletDisconnectButton /> : <WalletMultiButton />}
         <div>
           {publicKey && !isVerified && (
