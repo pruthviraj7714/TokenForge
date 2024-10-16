@@ -47,23 +47,25 @@ export async function POST(req: NextRequest) {
 
     const connection = new Connection(clusterApiUrl("devnet"));
 
-    let isError = false;
+    let transactionStatus = "SUCCESS";
 
     try {
-      await connection.requestAirdrop(
+      const signature = await connection.requestAirdrop(
         new PublicKey(publicKey),
         amount * LAMPORTS_PER_SOL
       );
+      
+      await connection.confirmTransaction(signature, "confirmed");
+      
     } catch (error) {
-      isError = true;
+      console.error("Airdrop error:", error);
+      transactionStatus = "FAILED";
     }
-
-    const status = isError ? "Failed" : "Success";
 
     await prisma.transaction.create({
       data: {
         type: "AIRDROP",
-        status: status === "Success" ? "SUCCESS" : "FAILED",
+        status: transactionStatus === "SUCCESS" ? "SUCCESS" : "FAILED" ,
         amount,
         userId: user?.id,
       },
@@ -71,11 +73,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        message: status === "Success" ? "Success" : "Failed",
+        message: transactionStatus === "SUCCESS" ? "Success" : "Failed",
       },
-      { status: 200 }
+      { status: transactionStatus === "SUCCESS" ? 200 : 500 }
     );
   } catch (error) {
+    console.error("Server error:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error!",

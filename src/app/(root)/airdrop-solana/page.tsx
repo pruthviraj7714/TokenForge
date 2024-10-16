@@ -47,7 +47,7 @@ export default function AirdropSolana() {
 
     try {
       const res = await axios.post("/api/user/transaction/airdrop", {
-        publicKey,
+        publicKey : publicKey.toString(),
         amount : Number(amount),
       });
 
